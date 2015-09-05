@@ -126,12 +126,10 @@ namespace DepotDownloader
                 SteamApps.PICSProductInfoCallback.PICSProductInfo package;
                 if ( steam3.PackageInfo.TryGetValue( license, out package ) && package != null )
                 {
-                    KeyValue root = package.KeyValues[license.ToString()];
-
-                    if ( root["appids"].Children.Any( child => child.AsInteger() == depotId ) )
+                    if ( package.KeyValues["appids"].Children.Any( child => child.AsInteger() == depotId ) )
                         return true;
 
-                    if ( root["depotids"].Children.Any( child => child.AsInteger() == depotId ) )
+                    if ( package.KeyValues["depotids"].Children.Any( child => child.AsInteger() == depotId ) )
                         return true;
                 }
             }
@@ -221,7 +219,15 @@ namespace DepotDownloader
                 }
 
                 steam3.RequestAppInfo(otherAppId);
-                return GetSteam3DepotManifest(depotId, otherAppId, branch);
+
+                if (AccountHasAccess(otherAppId))
+                {
+                    return GetSteam3DepotManifest(depotId, otherAppId, branch);
+                } else {
+                    string contentName = GetAppOrDepotName(INVALID_DEPOT_ID, otherAppId);
+                    string contentDepotName = GetAppOrDepotName(depotId, appId);
+                    Console.WriteLine("Dependent app {0} ({1}) for depot {2} ({3}) is not available from this account.", otherAppId, contentName, depotId, contentDepotName);
+                }
             }
 
             var manifests = depotChild["manifests"];
@@ -784,7 +790,7 @@ namespace DepotDownloader
                         }
                         else
                         {
-                            size_downloaded += (file.TotalSize - (ulong)neededChunks.Select(x => (int)x.UncompressedLength).Sum());
+                            size_downloaded += (file.TotalSize - (ulong)neededChunks.Select(x => (long)x.UncompressedLength).Sum());
                         }
                     }
 
